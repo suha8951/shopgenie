@@ -1,3 +1,4 @@
+
 class InvoiceItem {
   final int id;
   final int product;
@@ -27,21 +28,34 @@ class InvoiceItem {
         return '${(quantity * 1000).toInt()} g';
       }
       return '${quantity.toStringAsFixed(3)} kg';
-    } else {
-      return '${quantity.toInt()} units';
     }
+
+    return '${quantity.toInt()} units';
+  }
+
+  static double _toDouble(dynamic value, {double fallback = 0.0}) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   factory InvoiceItem.fromJson(Map<String, dynamic> json) {
     return InvoiceItem(
-      id: json['id'] as int? ?? 0,
-      product: json['product'] as int? ?? 0,
-      productName: json['product_name'] as String? ?? 'Item',
-      productCategory: json['product_category'] as String? ?? 'General',
-      sellingType: json['selling_type'] as String? ?? 'UNIT',
-      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
-      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
+      id: _toInt(json['id']) ?? 0,
+      product: _toInt(json['product']) ?? 0,
+      productName: json['product_name']?.toString() ?? 'Item',
+      productCategory: json['product_category']?.toString() ?? 'General',
+      sellingType: json['selling_type']?.toString() ?? 'UNIT',
+      quantity: _toDouble(json['quantity']),
+      unitPrice: _toDouble(json['unit_price']),
+      totalPrice: _toDouble(json['total_price']),
     );
   }
 

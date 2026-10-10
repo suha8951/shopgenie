@@ -310,7 +310,7 @@ class _ProductDetailsScreenState
 
             // VISION SETUP
             const Text(
-              'ESP32-CAM & Vision',
+              'Phone Camera & Vision',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -325,7 +325,7 @@ class _ProductDetailsScreenState
                 child: Column(
                   children: [
                     _DetailRow(
-                      title: 'ESP32-CAM Recognition',
+                      title: 'Phone Camera Recognition',
                       value: _product.featureVector != null
                           ? 'Ready'
                           : 'Not enrolled',

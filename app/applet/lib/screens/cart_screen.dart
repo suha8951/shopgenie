@@ -101,8 +101,8 @@ class CartScreen extends StatelessWidget {
               ? EmptyStateView(
                   icon: Icons.remove_shopping_cart_outlined,
                   title: 'Your Cart is Empty',
-                  description: 'Add products using the vision scanner or manual selection.',
-                  actionText: 'Scan Products',
+                  message: 'Add products using the vision scanner or manual selection.',
+                  actionLabel: 'Scan Products',
                   onAction: () => Navigator.pushReplacementNamed(context, '/scan'),
                 )
               : ListView.separated(

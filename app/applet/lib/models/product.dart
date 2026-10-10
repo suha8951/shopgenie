@@ -1,9 +1,10 @@
+
 class Product {
   final int id;
   final int? user;
   final String name;
   final String category;
-  final String sellingType; // 'UNIT' or 'KG'
+  final String sellingType;
   final double costPrice;
   final double pricePerUnit;
   final double quantity;
@@ -23,43 +24,81 @@ class Product {
     required this.costPrice,
     required this.pricePerUnit,
     required this.quantity,
-    required this.formattedQuantity,
+    String? formattedQuantity,
     this.featureVector,
     required this.isLoose,
     this.imageUrl,
     this.createdAt,
     this.updatedAt,
-  });
+  }) : formattedQuantity =
+      formattedQuantity ?? _formatQuantity(quantity, sellingType);
 
   bool get isUnit => sellingType.toUpperCase() == 'UNIT';
+
   bool get isKg => sellingType.toUpperCase() == 'KG';
 
-  factory Product.fromJson(Map<String, dynamic> json) {
-    List<double>? vector;
-    if (json['feature_vector'] != null && json['feature_vector'] is List) {
-      vector = (json['feature_vector'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList();
+  static double _toDouble(dynamic value, {double fallback = 0.0}) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static String _formatQuantity(double quantity, String sellingType) {
+    if (sellingType.toUpperCase() == 'KG') {
+      return '${quantity.toStringAsFixed(3)} kg';
     }
 
+    final units = quantity == quantity.roundToDouble()
+        ? quantity.toInt().toString()
+        : quantity.toString();
+
+    return '$units units';
+  }
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    final sellingType = json['selling_type']?.toString() ?? 'UNIT';
+    final quantity = _toDouble(json['quantity']);
+    final rawFormattedQuantity = json['formatted_quantity']?.toString();
+
+    List<double>? vector;
+    final rawVector = json['feature_vector'];
+
+    if (rawVector is List) {
+      vector = rawVector.map((value) => _toDouble(value)).toList();
+    }
+
+    final rawCreatedAt = json['created_at'];
+    final rawUpdatedAt = json['updated_at'];
+
     return Product(
-      id: json['id'] as int? ?? 0,
-      user: json['user'] as int?,
-      name: json['name'] as String? ?? '',
-      category: json['category'] as String? ?? 'General',
-      sellingType: json['selling_type'] as String? ?? 'UNIT',
-      costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
-      pricePerUnit: (json['price_per_unit'] as num?)?.toDouble() ?? 0.0,
-      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-      formattedQuantity: json['formatted_quantity'] as String? ?? '',
+      id: _toInt(json['id']) ?? 0,
+      user: _toInt(json['user']),
+      name: json['name']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'General',
+      sellingType: sellingType,
+      costPrice: _toDouble(json['cost_price']),
+      pricePerUnit: _toDouble(json['price_per_unit']),
+      quantity: quantity,
+      formattedQuantity:
+      rawFormattedQuantity == null || rawFormattedQuantity.isEmpty
+          ? _formatQuantity(quantity, sellingType)
+          : rawFormattedQuantity,
       featureVector: vector,
-      isLoose: json['is_loose'] as bool? ?? false,
-      imageUrl: json['image_url'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
+      isLoose: json['is_loose'] == true ||
+          json['is_loose']?.toString().toLowerCase() == 'true',
+      imageUrl: json['image_url']?.toString(),
+      createdAt: rawCreatedAt is String
+          ? DateTime.tryParse(rawCreatedAt)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'] as String)
+      updatedAt: rawUpdatedAt is String
+          ? DateTime.tryParse(rawUpdatedAt)
           : null,
     );
   }
@@ -104,7 +143,7 @@ class Product {
       costPrice: costPrice ?? this.costPrice,
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
       quantity: quantity ?? this.quantity,
-      formattedQuantity: formattedQuantity ?? this.formattedQuantity,
+      formattedQuantity: formattedQuantity,
       featureVector: featureVector ?? this.featureVector,
       isLoose: isLoose ?? this.isLoose,
       imageUrl: imageUrl ?? this.imageUrl,

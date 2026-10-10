@@ -1,3 +1,4 @@
+
 import 'invoice_item.dart';
 
 class Invoice {
@@ -21,26 +22,46 @@ class Invoice {
     this.updatedAt,
   });
 
+  static double _toDouble(dynamic value, {double fallback = 0.0}) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   factory Invoice.fromJson(Map<String, dynamic> json) {
     List<InvoiceItem> itemsList = [];
-    if (json['items'] != null && json['items'] is List) {
-      itemsList = (json['items'] as List)
-          .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
+
+    final rawItems = json['items'];
+
+    if (rawItems is List) {
+      itemsList = rawItems
+          .whereType<Map<String, dynamic>>()
+          .map(InvoiceItem.fromJson)
           .toList();
     }
 
+    final rawCreatedAt = json['created_at'];
+    final rawUpdatedAt = json['updated_at'];
+
     return Invoice(
-      id: json['id'] as int? ?? 0,
-      user: json['user'] as int?,
-      totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'] as String? ?? 'COMPLETED',
+      id: _toInt(json['id']) ?? 0,
+      user: _toInt(json['user']),
+      totalAmount: _toDouble(json['total_amount']),
+      status: json['status']?.toString() ?? 'COMPLETED',
       items: itemsList,
-      itemCount: json['item_count'] as int? ?? itemsList.length,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
+      itemCount: _toInt(json['item_count']) ?? itemsList.length,
+      createdAt: rawCreatedAt is String
+          ? DateTime.tryParse(rawCreatedAt)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'] as String)
+      updatedAt: rawUpdatedAt is String
+          ? DateTime.tryParse(rawUpdatedAt)
           : null,
     );
   }
@@ -51,9 +72,10 @@ class Invoice {
       if (user != null) 'user': user,
       'total_amount': totalAmount,
       'status': status,
-      'items': items.map((i) => i.toJson()).toList(),
+      'items': items.map((item) => item.toJson()).toList(),
       'item_count': itemCount,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };
   }
 }

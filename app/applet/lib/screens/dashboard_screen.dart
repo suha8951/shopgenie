@@ -97,9 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             },
           ),
-          CartBadgeButton(
-            onTap: () => Navigator.pushNamed(context, '/cart'),
-          ),
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Profile & Settings',
@@ -114,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? const LoadingStateView(message: 'Loading store dashboard...')
             : _error != null
                 ? ErrorStateView(
-                    error: _error!,
+                    message: _error!,
                     onRetry: _loadDashboardData,
                   )
                 : SingleChildScrollView(

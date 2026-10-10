@@ -50,19 +50,14 @@ class _BillingScreenState extends State<BillingScreen> {
     }
   }
 
-  Future<void> _openEsp32Billing() async {
+  Future<void> _openCameraBilling() async {
     setState(() {
-      selectedMethod = 'esp32';
+      selectedMethod = 'camera';
       _errorMessage = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'ESP32 Smart Billing is not connected yet.',
-        ),
-      ),
-    );
+    await Navigator.pushNamed(context, '/scan');
+    if (mounted) setState(() {});
   }
 
   Future<void> _openVoiceBilling() async {
@@ -202,10 +197,10 @@ class _BillingScreenState extends State<BillingScreen> {
 
                   _BillingMethodCard(
                     icon: Icons.camera_alt_outlined,
-                    title: 'ESP32 Smart Billing',
-                    subtitle: 'Identify products using ESP32-CAM',
-                    selected: selectedMethod == 'esp32',
-                    onTap: _openEsp32Billing,
+                    title: 'Phone Camera Billing',
+                    subtitle: 'Capture products with your phone camera',
+                    selected: selectedMethod == 'camera',
+                    onTap: _openCameraBilling,
                   ),
 
                   const SizedBox(height: 10),
@@ -391,7 +386,7 @@ class _BillingScreenState extends State<BillingScreen> {
             ),
             const SizedBox(height: 5),
             Text(
-              'Choose Manual, ESP32, or Voice to add products.',
+              'Choose Phone Camera, Manual, or Voice to add products.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,

@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
+
 import '../models/product.dart';
 import '../services/cart_service.dart';
-import '../theme/app_theme.dart';
 
+/// Shows whether a product is sold by unit or by weight.
 class SellingTypeBadge extends StatelessWidget {
   final String sellingType;
   final bool isLoose;
@@ -15,141 +17,145 @@ class SellingTypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUnit = sellingType.toUpperCase() == 'UNIT';
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    final String label = sellingType.toUpperCase() == 'KG'
+        ? 'BY KG'
+        : 'UNIT';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isUnit ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isUnit ? const Color(0xFFA5D6A7) : const Color(0xFFFFCC80),
-        ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isUnit ? Icons.inventory_2_outlined : Icons.scale_outlined,
-            size: 12,
-            color: isUnit ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            isUnit ? 'UNIT (Packaged)' : 'LOOSE (By Weight)',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isUnit ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
-            ),
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.onSecondaryContainer,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 }
 
+/// Shows the current stock status of a product.
 class StockStatusBadge extends StatelessWidget {
-  final Product product;
+  final Product? product;
+  final double? quantity;
+  final double lowStockThreshold;
 
-  const StockStatusBadge({super.key, required this.product});
+  const StockStatusBadge({
+    super.key,
+    this.product,
+    this.quantity,
+    this.lowStockThreshold = 5,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isLow = product.isUnit ? product.quantity <= 5.0 : product.quantity <= 2.0;
+    final double stockQuantity = quantity ?? product?.quantity ?? 0;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    late final String label;
+    late final Color badgeColor;
+
+    if (stockQuantity <= 0) {
+      label = 'Out of Stock';
+      badgeColor = colors.error;
+    } else if (stockQuantity <= lowStockThreshold) {
+      final String formattedQuantity =
+          product?.formattedQuantity ??
+              (stockQuantity == stockQuantity.roundToDouble()
+                  ? '${stockQuantity.toInt()} units'
+                  : '$stockQuantity units');
+
+      label = 'Low: $formattedQuantity';
+      badgeColor = colors.tertiary;
+    } else {
+      label = 'In Stock';
+      badgeColor = colors.primary;
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
-        color: isLow ? const Color(0xFFFFEBEE) : const Color(0xFFF1F8E9),
-        borderRadius: BorderRadius.circular(8),
+        color: badgeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        isLow ? 'Low: ${product.formattedQuantity}' : 'Stock: ${product.formattedQuantity}',
+        label,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: isLow ? AppTheme.dangerRed : const Color(0xFF33691E),
+          color: badgeColor,
         ),
       ),
     );
   }
 }
 
+/// Displays a statistic with a title, value, and icon.
 class StatCard extends StatelessWidget {
   final String title;
   final String value;
-  final String? subtitle;
   final IconData icon;
-  final Color iconColor;
-  final Color? backgroundColor;
-  final VoidCallback? onTap;
+  final Color? iconColor;
+  final String? subtitle;
 
   const StatCard({
     super.key,
     required this.title,
     required this.value,
-    this.subtitle,
     required this.icon,
-    required this.iconColor,
-    this.backgroundColor,
-    this.onTap,
+    this.iconColor,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
+    final Color effectiveIconColor =
+        iconColor ?? Theme.of(context).colorScheme.primary;
+
+    return Card(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.borderLight),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textMuted,
-                    fontWeight: FontWeight.w500,
+                Icon(icon, color: effectiveIconColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 20),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 20,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-                letterSpacing: -0.5,
               ),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle!,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ],
@@ -159,6 +165,7 @@ class StatCard extends StatelessWidget {
   }
 }
 
+/// Displays product details in a card.
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
@@ -173,91 +180,69 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 56,
+                height: 56,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: product.isUnit
-                      ? AppTheme.primaryGreen.withOpacity(0.08)
-                      : AppTheme.accentAmber.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color: colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  product.isUnit ? Icons.shopping_bag_outlined : Icons.scale_outlined,
-                  color: product.isUnit ? AppTheme.primaryGreen : AppTheme.accentAmber,
-                  size: 24,
+                  Icons.inventory_2_outlined,
+                  color: colors.primary,
+                  size: 28,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       product.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          product.category,
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '•',
-                          style: const TextStyle(color: AppTheme.textMuted),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '₹${product.pricePerUnit.toStringAsFixed(2)}/${product.sellingType}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryGreenDark,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '₹${product.pricePerUnit.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        SellingTypeBadge(
-                          sellingType: product.sellingType,
-                          isLoose: product.isLoose,
-                        ),
-                        const SizedBox(width: 8),
-                        StockStatusBadge(product: product),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(product.formattedQuantity),
+                    const SizedBox(height: 4),
+                    SellingTypeBadge(
+                      sellingType: product.sellingType,
+                      isLoose: product.isLoose,
                     ),
+                    const SizedBox(height: 4),
+                    StockStatusBadge(product: product),
                   ],
                 ),
               ),
-              if (onAddToCart != null)
-                IconButton.filledTonal(
+              if (onAddToCart != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
                   onPressed: onAddToCart,
-                  icon: const Icon(Icons.add_shopping_cart, size: 20),
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.12),
-                    foregroundColor: AppTheme.primaryGreen,
-                  ),
+                  tooltip: 'Add to cart',
+                  icon: const Icon(Icons.add_shopping_cart),
                 ),
+              ],
             ],
           ),
         ),
@@ -266,10 +251,14 @@ class ProductCard extends StatelessWidget {
   }
 }
 
+/// Displays a loading indicator and message.
 class LoadingStateView extends StatelessWidget {
-  final String? message;
+  final String message;
 
-  const LoadingStateView({super.key, this.message});
+  const LoadingStateView({
+    super.key,
+    this.message = 'Loading...',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -277,169 +266,64 @@ class LoadingStateView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppTheme.primaryGreen),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              message!,
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
-            ),
-          ],
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(message),
         ],
       ),
     );
   }
 }
 
+/// Displays a message when no content is available.
 class EmptyStateView extends StatelessWidget {
-  final IconData icon;
   final String title;
-  final String description;
-  final String? actionText;
+  final String? message;
+  final IconData icon;
+  final String? actionLabel;
   final VoidCallback? onAction;
 
   const EmptyStateView({
     super.key,
-    required this.icon,
     required this.title,
-    required this.description,
-    this.actionText,
+    this.message,
+    this.icon = Icons.inbox_outlined,
+    this.actionLabel,
     this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 48, color: AppTheme.primaryGreen),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            if (actionText != null && onAction != null) ...[
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: onAction,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(160, 44),
-                ),
-                child: Text(actionText!),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ErrorStateView extends StatelessWidget {
-  final String error;
-  final VoidCallback? onRetry;
-  final VoidCallback? onConfigureServer;
-
-  const ErrorStateView({
-    super.key,
-    required this.error,
-    this.onRetry,
-    this.onConfigureServer,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isConnectionError = error.contains('Failed to connect') ||
-        error.contains('SocketException') ||
-        error.contains('Connection refused') ||
-        error.contains('timed out') ||
-        error.contains('Cannot reach server');
-
-    return Center(
-      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.dangerRed.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isConnectionError ? Icons.cloud_off_rounded : Icons.error_outline,
-                size: 40,
-                color: AppTheme.dangerRed,
-              ),
-            ),
+            Icon(icon, size: 56, color: colors.outline),
             const SizedBox(height: 16),
             Text(
-              isConnectionError ? 'Server Connection Failed' : 'Something went wrong',
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+              title,
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            if (isConnectionError) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.borderLight),
-                ),
-                child: const Text(
-                  '10.0.2.2 is an emulator alias for your computer\'s localhost.\nIf running locally, ensure Django is running:\npython manage.py runserver 0.0.0.0:8000',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted, height: 1.4),
-                  textAlign: TextAlign.center,
-                ),
+            if (message != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (onRetry != null)
-                  ElevatedButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Retry Connection'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    ),
-                  ),
-              ],
-            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),
@@ -447,54 +331,103 @@ class ErrorStateView extends StatelessWidget {
   }
 }
 
-class CartBadgeButton extends StatelessWidget {
-  final VoidCallback onTap;
+/// Displays an error message and an optional retry button.
+class ErrorStateView extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
 
-  const CartBadgeButton({super.key, required this.onTap});
+  const ErrorStateView({
+    super.key,
+    required this.message,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: CartService(),
-      builder: (context, _) {
-        final count = CartService().itemCount;
-        return Stack(
-          alignment: Alignment.center,
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined),
-              tooltip: 'Cart',
-              onPressed: onTap,
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: colors.error,
             ),
-            if (count > 0)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.accentAmber,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cart button with a badge showing the item count.
+class CartBadgeButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const CartBadgeButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final int itemCount = CartService().itemCount;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: onPressed,
+          tooltip: 'Shopping cart',
+          icon: const Icon(Icons.shopping_cart_outlined),
+        ),
+        if (itemCount > 0)
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: colors.error,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                itemCount > 99 ? '99+' : itemCount.toString(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.onError,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-          ],
-        );
-      },
+            ),
+          ),
+      ],
     );
   }
 }

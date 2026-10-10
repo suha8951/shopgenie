@@ -505,7 +505,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
               // Vision status
               const Text(
-                'ESP32-CAM Recognition',
+                'Phone Camera Recognition',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

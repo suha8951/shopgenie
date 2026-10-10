@@ -9,8 +9,6 @@ class ApiException implements Exception {
   final dynamic data;
 
   ApiException(this.message, {this.statusCode, this.data});
-
-  @override
   String toString() => message;
 }
 

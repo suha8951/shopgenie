@@ -1,6 +1,6 @@
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopgenie_flutter/models/product.dart';
-import 'package:shopgenie_flutter/models/cart_item.dart';
 import 'package:shopgenie_flutter/services/cart_service.dart';
 
 void main() {
@@ -13,7 +13,7 @@ void main() {
       cartService = CartService();
       cartService.clear();
 
-      unitProduct = const Product(
+      unitProduct = Product(
         id: 1,
         name: 'Parle-G 100g',
         category: 'Snacks',
@@ -22,9 +22,10 @@ void main() {
         pricePerUnit: 10.0,
         quantity: 50.0,
         isLoose: false,
+        formattedQuantity: '50 units',
       );
 
-      kgProduct = const Product(
+      kgProduct = Product(
         id: 2,
         name: 'Basmati Rice',
         category: 'Grains',
@@ -33,6 +34,7 @@ void main() {
         pricePerUnit: 120.0,
         quantity: 25.0,
         isLoose: true,
+        formattedQuantity: '25.000 kg',
       );
     });
 
@@ -56,11 +58,12 @@ void main() {
 
       expect(cartService.items.length, 1);
       expect(cartService.items.first.quantity, 1.5);
-      expect(cartService.totalAmount, 180.0); // 1.5 * 120 = 180
+      expect(cartService.totalAmount, 180.0);
     });
 
     test('Increment and decrement unit quantity', () {
       cartService.addProduct(unitProduct, quantity: 1.0);
+
       expect(cartService.items.first.quantity, 1.0);
 
       cartService.incrementQuantity(unitProduct.id);
@@ -69,7 +72,6 @@ void main() {
       cartService.decrementQuantity(unitProduct.id);
       expect(cartService.items.first.quantity, 1.0);
 
-      // Decrement at 1 removes from cart
       cartService.decrementQuantity(unitProduct.id);
       expect(cartService.items, isEmpty);
     });
@@ -77,9 +79,11 @@ void main() {
     test('Remove item removes product from cart', () {
       cartService.addProduct(unitProduct, quantity: 2.0);
       cartService.addProduct(kgProduct, quantity: 1.0);
+
       expect(cartService.items.length, 2);
 
       cartService.removeItem(unitProduct.id);
+
       expect(cartService.items.length, 1);
       expect(cartService.items.first.product.id, kgProduct.id);
     });
@@ -87,6 +91,7 @@ void main() {
     test('Clear empties all cart items', () {
       cartService.addProduct(unitProduct, quantity: 2.0);
       cartService.addProduct(kgProduct, quantity: 1.0);
+
       cartService.clear();
 
       expect(cartService.items, isEmpty);

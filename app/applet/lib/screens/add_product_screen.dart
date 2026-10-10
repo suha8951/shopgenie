@@ -1,4 +1,8 @@
+
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/product_service.dart';
 
@@ -11,11 +15,15 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ImagePicker _imagePicker = ImagePicker();
 
   String selectedMethod = '';
   String selectedUnit = 'Piece';
+
   bool isLoose = false;
   bool isSaving = false;
+
+  XFile? _capturedProductImage;
 
   final productNameController = TextEditingController();
   final categoryController = TextEditingController();
@@ -39,6 +47,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
+  Future<void> _captureProductImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+
+      if (!mounted || image == null) return;
+
+      setState(() {
+        _capturedProductImage = image;
+        selectedMethod = 'camera';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Product photo captured. Enter the product details below.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to capture photo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> addToStock() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -53,9 +94,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final sellingPrice =
         double.tryParse(sellingPriceController.text.trim()) ?? 0;
 
-    // Current Django backend supports UNIT and KG.
-    final sellingType =
-    selectedUnit == 'Kg' ? 'KG' : 'UNIT';
+    // Match the existing Django backend's UNIT and KG values.
+    final sellingType = selectedUnit == 'Kg' ? 'KG' : 'UNIT';
 
     setState(() {
       isSaving = true;
@@ -89,9 +129,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Failed to add product: $e',
-          ),
+          content: Text('Failed to add product: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -124,19 +162,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Text(
-                'Add a new product using camera, manual entry, or voice.',
+                'Add a product using your phone camera, manual entry, or voice.',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 15,
                 ),
               ),
-
               const SizedBox(height: 24),
-
               const Text(
                 'Choose Input Method',
                 style: TextStyle(
@@ -144,16 +178,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 14),
 
               _InputMethodCard(
                 icon: Icons.camera_alt_outlined,
-                title: 'Scan with ESP32-CAM',
-                subtitle:
-                'Identify the product using the ESP32 camera',
-                selected: selectedMethod == 'esp32',
-                onTap: () => selectMethod('esp32'),
+                title: 'Capture with Phone Camera',
+                subtitle: 'Take a photo of the product',
+                selected: selectedMethod == 'camera',
+                onTap: _captureProductImage,
               ),
 
               const SizedBox(height: 12),
@@ -161,8 +193,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               _InputMethodCard(
                 icon: Icons.edit_outlined,
                 title: 'Add Manually',
-                subtitle:
-                'Enter product details yourself',
+                subtitle: 'Enter product details yourself',
                 selected: selectedMethod == 'manual',
                 onTap: () => selectMethod('manual'),
               ),
@@ -172,22 +203,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
               _InputMethodCard(
                 icon: Icons.mic_none_outlined,
                 title: 'Add by Voice',
-                subtitle:
-                'Speak the product details',
+                subtitle: 'Speak the product details',
                 selected: selectedMethod == 'voice',
                 onTap: () => selectMethod('voice'),
               ),
 
               const SizedBox(height: 28),
 
-              if (selectedMethod == 'esp32')
-                _buildEsp32Section(),
-
-              if (selectedMethod == 'manual')
+              if (selectedMethod == 'camera') ...[
+                _buildCameraSection(),
+                const SizedBox(height: 24),
                 _buildProductForm(),
+              ],
 
-              if (selectedMethod == 'voice')
-                _buildVoiceSection(),
+              if (selectedMethod == 'manual') _buildProductForm(),
+
+              if (selectedMethod == 'voice') _buildVoiceSection(),
             ],
           ),
         ),
@@ -195,70 +226,81 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildEsp32Section() {
+  Widget _buildCameraSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
-          title: 'ESP32-CAM Product Scanner',
+          title: 'Product Photo',
           subtitle:
-          'Place the product in front of the ESP32-CAM.',
+          'Capture a clear photo of the product using your phone camera.',
         ),
-
         const SizedBox(height: 16),
 
-        Container(
-          width: double.infinity,
-          height: 220,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.grey.shade300,
+        if (_capturedProductImage != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.file(
+              File(_capturedProductImage!.path),
+              height: 220,
+              width: double.infinity,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 220,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  color: Colors.grey.shade100,
+                  child: const Text('Unable to display this photo.'),
+                );
+              },
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: 180,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.grey.shade100,
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.camera_alt_outlined, size: 52),
+                SizedBox(height: 12),
+                Text('No product photo captured'),
+              ],
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.camera_alt_outlined,
-                size: 64,
-                color: Colors.grey.shade600,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'ESP32-CAM Preview',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Camera recognition will be connected here.',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // ESP32-CAM connection will be implemented later.
-            },
+          child: OutlinedButton.icon(
+            onPressed: _captureProductImage,
             icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('Scan Product'),
+            label: Text(
+              _capturedProductImage == null
+                  ? 'Take Product Photo'
+                  : 'Retake Photo',
+            ),
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 8),
 
-        _buildProductForm(),
+        Text(
+          'Note: The photo is displayed here. Product recognition and '
+              'uploading the image to the backend are not connected by this '
+              'screen yet.',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
       ],
     );
   }
@@ -269,10 +311,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       children: [
         const _SectionTitle(
           title: 'Voice Product Entry',
-          subtitle:
-          'Speak the product name, quantity and prices.',
+          subtitle: 'Speak the product name, quantity, and prices.',
         ),
-
         const SizedBox(height: 16),
 
         Container(
@@ -291,34 +331,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   size: 38,
                 ),
               ),
-
               const SizedBox(height: 16),
-
               const Text(
-                'Tap the microphone and speak',
+                'Voice Entry',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Text(
-                'Example: "Add 20 kilograms rice, '
-                    'cost price 42 rupees per kg, '
-                    'selling price 50 rupees per kg."',
+                'Example: "Add 20 kilograms rice, cost price '
+                    '42 rupees per kg, selling price 50 rupees per kg."',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                 ),
               ),
-
               const SizedBox(height: 20),
-
               ElevatedButton.icon(
                 onPressed: () {
-                  // Voice recognition will be connected later.
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Voice recognition will be connected later.',
+                      ),
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.mic),
                 label: const Text('Start Voice Entry'),
@@ -328,7 +367,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
 
         const SizedBox(height: 24),
-
         _buildProductForm(),
       ],
     );
@@ -340,10 +378,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       children: [
         const _SectionTitle(
           title: 'Product Details',
-          subtitle:
-          'Review the details before adding the product to stock.',
+          subtitle: 'Enter the details before adding the product to stock.',
         ),
-
         const SizedBox(height: 16),
 
         TextFormField(
@@ -352,13 +388,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           decoration: const InputDecoration(
             labelText: 'Product Name',
             hintText: 'Example: Rice',
-            prefixIcon:
-            Icon(Icons.inventory_2_outlined),
+            prefixIcon: Icon(Icons.inventory_2_outlined),
             border: OutlineInputBorder(),
           ),
           validator: (value) {
-            if (value == null ||
-                value.trim().isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Enter product name';
             }
             return null;
@@ -373,13 +407,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           decoration: const InputDecoration(
             labelText: 'Category',
             hintText: 'Example: Grocery',
-            prefixIcon:
-            Icon(Icons.category_outlined),
+            prefixIcon: Icon(Icons.category_outlined),
             border: OutlineInputBorder(),
           ),
           validator: (value) {
-            if (value == null ||
-                value.trim().isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Enter category';
             }
             return null;
@@ -392,8 +424,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           value: selectedUnit,
           decoration: const InputDecoration(
             labelText: 'Unit',
-            prefixIcon:
-            Icon(Icons.scale_outlined),
+            prefixIcon: Icon(Icons.scale_outlined),
             border: OutlineInputBorder(),
           ),
           items: const [
@@ -423,30 +454,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
         TextFormField(
           controller: quantityController,
-          keyboardType:
-          const TextInputType.numberWithOptions(
+          keyboardType: const TextInputType.numberWithOptions(
             decimal: true,
           ),
           decoration: InputDecoration(
             labelText: 'Stock Quantity',
-            hintText: selectedUnit == 'Kg'
-                ? 'Example: 20'
-                : 'Example: 100',
-            prefixIcon:
-            const Icon(Icons.inventory_outlined),
+            hintText: selectedUnit == 'Kg' ? 'Example: 20' : 'Example: 100',
+            prefixIcon: const Icon(Icons.inventory_outlined),
             suffixText: selectedUnit,
             border: const OutlineInputBorder(),
           ),
           validator: (value) {
-            final number =
-            double.tryParse(value ?? '');
+            final number = double.tryParse(value ?? '');
 
             if (number == null || number < 0) {
               return 'Enter a valid quantity';
             }
 
-            if (selectedUnit != 'Kg' &&
-                number % 1 != 0) {
+            if (selectedUnit != 'Kg' && number % 1 != 0) {
               return 'Quantity must be a whole number';
             }
 
@@ -458,21 +483,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
         TextFormField(
           controller: costPriceController,
-          keyboardType:
-          const TextInputType.numberWithOptions(
+          keyboardType: const TextInputType.numberWithOptions(
             decimal: true,
           ),
           decoration: InputDecoration(
             labelText: 'Cost Price',
             hintText: 'Example: 42',
-            prefixIcon:
-            const Icon(Icons.currency_rupee),
+            prefixIcon: const Icon(Icons.currency_rupee),
             suffixText: '/ $selectedUnit',
             border: const OutlineInputBorder(),
           ),
           validator: (value) {
-            final number =
-            double.tryParse(value ?? '');
+            final number = double.tryParse(value ?? '');
 
             if (number == null || number < 0) {
               return 'Enter a valid cost price';
@@ -486,21 +508,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
         TextFormField(
           controller: sellingPriceController,
-          keyboardType:
-          const TextInputType.numberWithOptions(
+          keyboardType: const TextInputType.numberWithOptions(
             decimal: true,
           ),
           decoration: InputDecoration(
             labelText: 'Selling Price',
             hintText: 'Example: 50',
-            prefixIcon:
-            const Icon(Icons.sell_outlined),
+            prefixIcon: const Icon(Icons.sell_outlined),
             suffixText: '/ $selectedUnit',
             border: const OutlineInputBorder(),
           ),
           validator: (value) {
-            final number =
-            double.tryParse(value ?? '');
+            final number = double.tryParse(value ?? '');
 
             if (number == null || number <= 0) {
               return 'Enter a valid selling price';
@@ -516,9 +535,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           contentPadding: EdgeInsets.zero,
           title: const Text(
             'Loose Product',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: const Text(
             'Enable for loose commodities such as rice or sugar.',
@@ -547,13 +564,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 strokeWidth: 2,
               ),
             )
-                : const Icon(
-              Icons.add_box_outlined,
-            ),
+                : const Icon(Icons.add_box_outlined),
             label: Text(
-              isSaving
-                  ? 'Saving to Stock...'
-                  : 'Add to Stock',
+              isSaving ? 'Saving to Stock...' : 'Add to Stock',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -596,16 +609,12 @@ class _InputMethodCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 27,
-                child: Icon(
-                  icon,
-                  size: 27,
-                ),
+                child: Icon(icon, size: 27),
               ),
               const SizedBox(width: 15),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
@@ -650,8 +659,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment:
-      CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,

@@ -50,7 +50,7 @@ class _ScanResultsScreenState extends State<ScanResultsScreen> {
         title: const Text('Vision Recognition Result'),
         actions: [
           CartBadgeButton(
-            onTap: () => Navigator.pushNamed(context, '/cart'),
+            onPressed: () => Navigator.pushNamed(context, '/cart'),
           ),
         ],
       ),
@@ -282,8 +282,8 @@ class _ScanResultsScreenState extends State<ScanResultsScreen> {
           EmptyStateView(
             icon: Icons.inventory_2_outlined,
             title: 'No Loose Products Found',
-            description: 'No products with selling type "KG" or loose tag are registered in your catalog.',
-            actionText: 'Manual Selection',
+            message: 'No products with selling type "KG" or loose tag are registered in your catalog.',
+            actionLabel: 'Manual Selection',
             onAction: () => Navigator.pushReplacementNamed(context, '/manual_selection'),
           )
         else
@@ -343,8 +343,8 @@ class _ScanResultsScreenState extends State<ScanResultsScreen> {
         EmptyStateView(
           icon: Icons.search_off_outlined,
           title: 'No Matching Product',
-          description: result.message ?? 'The visual scanner could not identify this product above the similarity threshold.',
-          actionText: 'Manual Selection',
+          message: result.message ?? 'The visual scanner could not identify this product above the similarity threshold.',
+          actionLabel: 'Manual Selection',
           onAction: () => Navigator.pushReplacementNamed(context, '/manual_selection'),
         ),
         const SizedBox(height: 12),

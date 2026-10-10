@@ -1,3 +1,4 @@
+
 import 'product.dart';
 
 enum MatchType {
@@ -16,7 +17,7 @@ class ScanResult {
   final double? pricePerUnit;
   final double? quantity;
   final String? formattedQuantity;
-  final double? similarity; // Cosine similarity e.g. 0.85
+  final double? similarity;
   final String? message;
   final List<Product> candidates;
 
@@ -36,46 +37,80 @@ class ScanResult {
   });
 
   bool get isProductMatch => matchType == MatchType.product;
+
   bool get isLooseCandidates => matchType == MatchType.looseCandidates;
 
-  int get confidencePercentage => similarity != null ? (similarity! * 100).clamp(0, 100).toInt() : 0;
+  int get confidencePercentage =>
+      similarity == null ? 0 : (similarity! * 100).round().clamp(0, 100);
+
+  static double? _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
 
   factory ScanResult.fromJson(Map<String, dynamic> json) {
-    String typeStr = (json['match_type'] as String? ?? '').toUpperCase();
-    MatchType type;
-    if (typeStr == 'PRODUCT') {
-      type = MatchType.product;
-    } else if (typeStr == 'LOOSE_CANDIDATES') {
-      type = MatchType.looseCandidates;
-    } else {
-      type = MatchType.unknown;
-    }
+    // Support both the API's match_type format and the test's status format.
+    final rawType = (json['match_type'] ?? json['status'] ?? '')
+        .toString()
+        .toUpperCase();
 
-    List<Product> candidateList = [];
-    if (json['candidates'] != null && json['candidates'] is List) {
-      candidateList = (json['candidates'] as List)
-          .map((item) => Product.fromJson(item as Map<String, dynamic>))
-          .toList();
-    }
+    final matchedProduct = json['matched_product'] is Map
+        ? Map<String, dynamic>.from(json['matched_product'] as Map)
+        : <String, dynamic>{};
+
+    final rawCandidates = json['candidates'];
+    final candidateList = rawCandidates is List
+        ? rawCandidates
+        .whereType<Map>()
+        .map((item) => Product.fromJson(
+      Map<String, dynamic>.from(item),
+    ))
+        .toList()
+        : <Product>[];
+
+    final isLoose = rawType == 'LOOSE_CANDIDATES';
+    final isMatched = rawType == 'PRODUCT' ||
+        rawType == 'MATCHED' ||
+        matchedProduct.isNotEmpty;
+
+    final effectiveType = isLoose
+        ? MatchType.looseCandidates
+        : isMatched
+        ? MatchType.product
+        : MatchType.unknown;
+
+    // Prefer nested matched_product fields when that response format is used.
+    final source = matchedProduct.isNotEmpty ? matchedProduct : json;
 
     return ScanResult(
-      matchType: type,
-      productId: json['product_id'] as int?,
-      name: json['name'] as String?,
-      category: json['category'] as String?,
-      sellingType: json['selling_type'] as String?,
-      costPrice: (json['cost_price'] as num?)?.toDouble(),
-      pricePerUnit: (json['price_per_unit'] as num?)?.toDouble(),
-      quantity: (json['quantity'] as num?)?.toDouble(),
-      formattedQuantity: json['formatted_quantity'] as String?,
-      similarity: (json['similarity'] as num?)?.toDouble(),
-      message: json['message'] as String?,
+      matchType: effectiveType,
+      productId: _toInt(source['product_id'] ?? source['id']),
+      name: source['name']?.toString(),
+      category: source['category']?.toString(),
+      sellingType: source['selling_type']?.toString(),
+      costPrice: _toDouble(source['cost_price']),
+      pricePerUnit: _toDouble(source['price_per_unit']),
+      quantity: _toDouble(source['quantity']),
+      formattedQuantity: source['formatted_quantity']?.toString(),
+      similarity: _toDouble(
+        json['similarity'] ?? json['confidence'],
+      ),
+      message: json['message']?.toString(),
       candidates: candidateList,
     );
   }
 
   Product? toProduct() {
     if (!isProductMatch || productId == null) return null;
+
     return Product(
       id: productId!,
       name: name ?? '',
@@ -84,7 +119,7 @@ class ScanResult {
       costPrice: costPrice ?? 0.0,
       pricePerUnit: pricePerUnit ?? 0.0,
       quantity: quantity ?? 0.0,
-      formattedQuantity: formattedQuantity ?? '',
+      formattedQuantity: formattedQuantity,
       isLoose: sellingType?.toUpperCase() == 'KG',
     );
   }

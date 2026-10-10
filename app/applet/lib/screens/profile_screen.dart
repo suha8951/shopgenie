@@ -11,7 +11,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool showAdvancedSettings = false;
 
   String djangoServerUrl = 'http://10.0.2.2:8000';
-  String esp32CameraUrl = 'http://192.168.1.100:81/stream';
+  String phoneCameraDescription = 'Uses this device camera';
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   _ConnectionRow(
                     icon: Icons.camera_alt_outlined,
-                    title: 'ESP32-CAM',
+                    title: 'Phone Camera',
                     status: 'Connected',
                     connected: true,
                   ),
@@ -99,9 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // ESP32 CAMERA
+            // PHONE CAMERA
             const Text(
-              'ESP32-CAM',
+              'Phone Camera',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -215,9 +215,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           const SizedBox(height: 20),
 
-                          // ESP32
+                          // Phone camera
                           const Text(
-                            'ESP32-CAM',
+                            'Phone Camera',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                             ),
@@ -227,17 +227,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           TextField(
                             controller: TextEditingController(
-                              text: esp32CameraUrl,
+                              text: phoneCameraDescription,
                             ),
                             decoration: const InputDecoration(
-                              labelText: 'Camera Stream / Capture URL',
+                              labelText: 'Camera source',
                               prefixIcon: Icon(
                                 Icons.camera_alt_outlined,
                               ),
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (value) {
-                              esp32CameraUrl = value;
+                              phoneCameraDescription = value;
                             },
                           ),
 
@@ -291,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 SizedBox(height: 12),
                                 Text(
-                                  'ESP32-CAM → Vision / CV Engine',
+                                  'Phone Camera → Vision / CV Engine',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),

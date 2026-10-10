@@ -3,8 +3,6 @@ import 'models/invoice.dart';
 import 'models/product.dart';
 import 'models/scan_result.dart';
 import 'screens/add_product_screen.dart';
-import 'screens/cart_screen.dart';
-import 'screens/checkout_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/edit_product_screen.dart';
 import 'screens/inventory_screen.dart';
@@ -68,8 +66,6 @@ class ShopGenieApp extends StatelessWidget {
           final product = ModalRoute.of(context)!.settings.arguments as Product;
           return WeightEntryScreen(product: product);
         },
-        '/cart': (context) => const CartScreen(),
-        '/checkout': (context) => const CheckoutScreen(),
         '/invoice': (context) {
           final invoice = ModalRoute.of(context)?.settings.arguments as Invoice?;
           return InvoiceScreen(initialInvoice: invoice);

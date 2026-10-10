@@ -1,10 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../models/scan_result.dart';
-import '../services/api_service.dart';
 import '../services/vision_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
 
+/// Captures a product using the phone's built-in camera and sends the image
+/// to the existing vision-match endpoint as base64. No ESP32-CAM is required.
 class ScanningScreen extends StatefulWidget {
   const ScanningScreen({super.key});
 
@@ -13,47 +19,47 @@ class ScanningScreen extends StatefulWidget {
 }
 
 class _ScanningScreenState extends State<ScanningScreen> {
-  final _esp32Controller = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
   double _threshold = 0.78;
   bool _isScanning = false;
-  String? _statusMessage;
   String? _errorMessage;
+  XFile? _capturedImage;
 
-  @override
-  void initState() {
-    super.initState();
-    _esp32Controller.text = ApiService().esp32Url;
-  }
-
-  @override
-  void dispose() {
-    _esp32Controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _triggerScan() async {
+  Future<void> _captureAndIdentify() async {
     setState(() {
-      _isScanning = true;
-      _statusMessage = 'Connecting to ESP32-CAM stream & capturing frame...';
       _errorMessage = null;
     });
 
     try {
-      final scanResult = await VisionService().matchFromEsp32(
-        esp32Url: _esp32Controller.text.trim(),
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+
+      if (!mounted || image == null) return;
+
+      setState(() {
+        _capturedImage = image;
+        _isScanning = true;
+      });
+
+      final bytes = await image.readAsBytes();
+      final imageBase64 = base64Encode(bytes);
+      final ScanResult result = await VisionService().matchFromBase64(
+        imageBase64: imageBase64,
         threshold: _threshold,
       );
 
       if (!mounted) return;
       setState(() => _isScanning = false);
-
-      // Navigate to scan results screen
-      Navigator.pushNamed(context, '/scan_results', arguments: scanResult);
+      Navigator.pushNamed(context, '/scan_results', arguments: result);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isScanning = false;
-        _errorMessage = 'Scan error: $e';
+        _errorMessage = 'Could not identify this photo. $e';
       });
     }
   }
@@ -62,231 +68,135 @@ class _ScanningScreenState extends State<ScanningScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ESP32-CAM Vision Scanner'),
+        title: const Text('Phone Camera Scanner'),
         actions: [
-          CartBadgeButton(onTap: () => Navigator.pushNamed(context, '/cart')),
+          CartBadgeButton(
+            onPressed: () => Navigator.pushNamed(context, '/cart'),
+          ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Viewfinder Simulated / ESP32 preview card
-            Container(
-              height: 240,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E2321),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Reticle overlay
-                  Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _isScanning ? AppTheme.accentAmber : AppTheme.primaryGreenLight,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  // Reticle corner accents
-                  Positioned(
-                    top: 24,
-                    left: 24,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                          left: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
+        children: [
+          Container(
+            height: 280,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2321),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: _capturedImage == null
+                ? const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_a_photo_outlined,
+                          size: 64, color: Colors.white70),
+                      SizedBox(height: 12),
+                      Text(
+                        'Capture a product with your phone',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 24,
-                    right: 24,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                          right: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 24,
-                    left: 24,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                          left: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 24,
-                    right: 24,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                          right: BorderSide(color: AppTheme.primaryGreenLight, width: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Status in center
-                  if (_isScanning)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(color: AppTheme.accentAmber),
-                        const SizedBox(height: 16),
-                        Text(
-                          _statusMessage ?? 'Analyzing with MobileNetV3...',
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                      SizedBox(height: 6),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          'Place one item in good light and keep its label visible.',
                           textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
-                      ],
-                    )
-                  else
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.camera_alt_outlined,
-                          size: 48,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Place Product Under ESP32-CAM',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Branded item or loose commodity bag',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.dangerRed.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.dangerRed.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: AppTheme.dangerRed, fontSize: 13),
                       ),
+                    ],
+                  )
+                : Image.file(
+                    // XFile.path is a local file path from the camera capture.
+                    File(_capturedImage!.path),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(Icons.image_not_supported_outlined,
+                          color: Colors.white70, size: 48),
                     ),
-                  ],
+                  ),
+          ),
+          const SizedBox(height: 16),
+          if (_isScanning) ...[
+            const LinearProgressIndicator(),
+            const SizedBox(height: 10),
+            const Text(
+              'Sending photo for product matching…',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.dangerRed.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.dangerRed.withOpacity(0.3),
                 ),
               ),
-              const SizedBox(height: 16),
-            ],
-
-            // Trigger Button
-            ElevatedButton.icon(
-              onPressed: _isScanning ? null : _triggerScan,
-              icon: _isScanning
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.flash_on_rounded),
-              label: Text(_isScanning ? 'Processing Frame...' : 'Capture & Identify Item'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                backgroundColor: AppTheme.primaryGreen,
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: AppTheme.dangerRed),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Manual Select Fallback Button
-            OutlinedButton.icon(
-              onPressed: () => Navigator.pushNamed(context, '/manual_selection'),
-              icon: const Icon(Icons.touch_app_outlined),
-              label: const Text('Manual Commodity Selection (No Camera)'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
+            const SizedBox(height: 16),
+          ],
+          ElevatedButton.icon(
+            onPressed: _isScanning ? null : _captureAndIdentify,
+            icon: Icon(_capturedImage == null
+                ? Icons.camera_alt_outlined
+                : Icons.camera_enhance_outlined),
+            label: Text(_isScanning
+                ? 'Identifying Product…'
+                : _capturedImage == null
+                    ? 'Open Camera & Identify'
+                    : 'Retake Photo & Identify'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              backgroundColor: AppTheme.primaryGreen,
             ),
-            const SizedBox(height: 24),
-
-            // ESP32 Settings Card
-            Container(
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _isScanning
+                ? null
+                : () => Navigator.pushNamed(context, '/manual_selection'),
+            icon: const Icon(Icons.touch_app_outlined),
+            label: const Text('Select Product Manually'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.borderLight),
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Camera & Model Configuration',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    'Recognition Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _esp32Controller,
-                    decoration: const InputDecoration(
-                      labelText: 'ESP32-CAM Stream / Frame URL',
-                      hintText: 'http://192.168.1.100:81/stream',
-                      prefixIcon: Icon(Icons.wifi_outlined),
-                    ),
-                    onSubmitted: (val) => ApiService().setEsp32Url(val),
-                  ),
-                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Similarity Threshold', style: TextStyle(fontSize: 13)),
+                      const Text('Similarity threshold'),
                       Text(
-                        '${(_threshold * 100).toInt()}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                        '${(_threshold * 100).round()}%',
+                        style: const TextStyle(
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -296,21 +206,25 @@ class _ScanningScreenState extends State<ScanningScreen> {
                     max: 0.95,
                     divisions: 45,
                     activeColor: AppTheme.primaryGreen,
-                    label: '${(_threshold * 100).toInt()}%',
-                    onChanged: (val) {
-                      setState(() => _threshold = val);
-                    },
+                    label: '${(_threshold * 100).round()}%',
+                    onChanged: _isScanning
+                        ? null
+                        : (value) => setState(() => _threshold = value),
                   ),
                   const Text(
-                    'Cosine threshold for MobileNetV3 matching. If lower than this or plain bag is detected, loose candidates will be presented.',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    'A higher threshold requires a closer visual match. If recognition fails, use manual selection.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+

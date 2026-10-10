@@ -1,6 +1,6 @@
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopgenie_flutter/models/product.dart';
-import 'package:shopgenie_flutter/models/cart_item.dart';
 import 'package:shopgenie_flutter/models/scan_result.dart';
 import 'package:shopgenie_flutter/models/invoice.dart';
 
@@ -33,12 +33,13 @@ void main() {
       expect(product.featureVector!.length, 3);
 
       final outJson = product.toJson();
+
       expect(outJson['name'], 'Tata Salt 1kg');
       expect(outJson['selling_type'], 'UNIT');
     });
 
     test('Loose Product formatted quantity', () {
-      final product = const Product(
+      final product = Product(
         id: 11,
         name: 'Sugar M30',
         category: 'Essentials',
@@ -47,6 +48,7 @@ void main() {
         pricePerUnit: 44.0,
         quantity: 12.500,
         isLoose: true,
+        formattedQuantity: '12.500 kg',
       );
 
       expect(product.isKg, isTrue);
@@ -72,6 +74,7 @@ void main() {
       };
 
       final matchResult = ScanResult.fromJson(matchJson);
+
       expect(matchResult.isProductMatch, isTrue);
       expect(matchResult.isLooseCandidates, isFalse);
       expect(matchResult.confidencePercentage, 92);
@@ -95,6 +98,7 @@ void main() {
       };
 
       final looseResult = ScanResult.fromJson(looseJson);
+
       expect(looseResult.isProductMatch, isFalse);
       expect(looseResult.isLooseCandidates, isTrue);
       expect(looseResult.candidates.length, 1);
@@ -130,6 +134,7 @@ void main() {
       };
 
       final invoice = Invoice.fromJson(invoiceJson);
+
       expect(invoice.id, 101);
       expect(invoice.totalAmount, 250.0);
       expect(invoice.items.length, 2);

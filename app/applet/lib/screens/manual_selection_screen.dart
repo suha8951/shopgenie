@@ -177,14 +177,14 @@ class _ManualSelectionScreenState extends State<ManualSelectionScreen> {
                 )
                     : _error != null
                     ? ErrorStateView(
-                  error: _error!,
+                  message: _error!,
                   onRetry: _fetchProducts,
                 )
                     : _filteredProducts.isEmpty
                     ? const EmptyStateView(
                   icon: Icons.search_off_outlined,
                   title: 'No Products Found',
-                  description:
+                  message:
                   'No products match your search.',
                 )
                     : ListView.separated(
