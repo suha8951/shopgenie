@@ -6,7 +6,7 @@ ShopGenie AI is a smart inventory and billing application designed to help shopk
 
 
 
-\## Technology Stack
+
 
 
 
