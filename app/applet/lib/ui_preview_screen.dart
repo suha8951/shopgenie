@@ -10,11 +10,12 @@ class UiPreviewScreen extends StatelessWidget {
       ('Products / Catalog', '/products', Icons.inventory_2_outlined),
       ('Add Product', '/add_product', Icons.add_box_outlined),
       ('Inventory', '/inventory', Icons.warehouse_outlined),
+      ('Worker Management', '/workers', Icons.badge_outlined),
       ('Phone Camera Scanner', '/scan', Icons.camera_alt_outlined),
       ('Manual Selection', '/manual_selection', Icons.touch_app_outlined),
       ('Billing', '/billing', Icons.point_of_sale_outlined),
       ('Invoice History', '/invoices', Icons.receipt_long_outlined),
-      ('Profile', '/profile', Icons.account_circle_outlined),
+      ('My Shop & Settings', '/profile', Icons.store_outlined),
       ('Login', '/login', Icons.login_outlined),
       ('Register Store', '/register', Icons.person_add_outlined),
     ];

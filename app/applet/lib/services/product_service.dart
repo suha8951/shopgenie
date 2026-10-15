@@ -1,5 +1,7 @@
 import '../models/product.dart';
 import 'api_service.dart';
+import 'demo_data.dart';
+import 'demo_service.dart';
 
 class ProductService {
   static final ProductService _instance = ProductService._internal();
@@ -9,6 +11,9 @@ class ProductService {
   final ApiService _api = ApiService();
 
   Future<List<Product>> getProducts() async {
+    if (DemoService().isDemoMode) {
+      return DemoData.getDemoProducts();
+    }
     final response = await _api.get('/api/products/');
     if (response is List) {
       return response.map((item) => Product.fromJson(item as Map<String, dynamic>)).toList();
@@ -17,6 +22,9 @@ class ProductService {
   }
 
   Future<Product> getProductDetail(int id) async {
+    if (DemoService().isDemoMode) {
+      return DemoData.getDemoProductDetail(id);
+    }
     final response = await _api.get('/api/products/$id/');
     return Product.fromJson(response as Map<String, dynamic>);
   }
@@ -32,6 +40,9 @@ class ProductService {
     List<double>? featureVector,
     String? imageUrl,
   }) async {
+    if (DemoService().isDemoMode) {
+      throw ApiException('Production stock registration is disabled in Demo Mode. Real login is required.');
+    }
     final body = {
       'name': name.trim(),
       'category': category.trim(),
@@ -59,6 +70,9 @@ class ProductService {
     List<double>? featureVector,
     String? imageUrl,
   }) async {
+    if (DemoService().isDemoMode) {
+      throw ApiException('Product modification is disabled in Demo Mode. Real login is required.');
+    }
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name.trim();
     if (category != null) body['category'] = category.trim();
@@ -77,6 +91,10 @@ class ProductService {
   }
 
   Future<void> deleteProduct(int id) async {
+    if (DemoService().isDemoMode) {
+      throw ApiException('Product deletion is disabled in Demo Mode. Real login is required.');
+    }
     await _api.delete('/api/products/$id/');
   }
 }
+

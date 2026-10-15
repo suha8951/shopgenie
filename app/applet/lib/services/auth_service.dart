@@ -1,6 +1,8 @@
 import '../models/auth_response.dart';
 import '../models/user.dart';
 import 'api_service.dart';
+import 'demo_data.dart';
+import 'demo_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -10,8 +12,21 @@ class AuthService {
   final ApiService _api = ApiService();
   User? _currentUser;
 
-  User? get currentUser => _currentUser;
-  bool get isLoggedIn => _api.isAuthenticated;
+  User? get currentUser {
+    if (DemoService().isDemoMode) {
+      return DemoData.demoUser;
+    }
+    return _currentUser;
+  }
+
+  bool get isLoggedIn {
+    // In Demo Mode, real authentication is always false to ensure demo users
+    // are never granted real API privileges or tokens.
+    if (DemoService().isDemoMode) {
+      return false;
+    }
+    return _api.isAuthenticated;
+  }
 
   Future<AuthResponse> login(String username, String password) async {
     final response = await _api.post('/api/auth/login/', body: {
@@ -71,7 +86,11 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    if (DemoService().isDemoMode) {
+      DemoService().exitDemo();
+    }
     _currentUser = null;
     await _api.clearAuth();
   }
 }
+

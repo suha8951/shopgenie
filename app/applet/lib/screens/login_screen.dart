@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/demo_service.dart';
 import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -434,7 +436,57 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 16),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            'DEVELOPMENT MODE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textMuted,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        DemoService().enterDemoMode();
+                        Navigator.pushReplacementNamed(context, '/dashboard');
+                      },
+                      icon: const Icon(Icons.explore_outlined, color: AppTheme.primaryGreen),
+                      label: const Text(
+                        'Explore Demo (Dev Mode)',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.primaryGreen, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Explore all 8 screens with sample Kirana data without backend login',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
                   Text(
                     'Connected to: ${ApiService().baseUrl}',
                     style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/cart_item.dart';
 import '../services/cart_service.dart';
 import '../services/checkout_service.dart';
+import '../services/demo_data.dart';
+import '../services/demo_service.dart';
 import '../theme/app_theme.dart';
 
 class BillingScreen extends StatefulWidget {
@@ -84,6 +86,53 @@ class _BillingScreenState extends State<BillingScreen> {
           content: Text(
             'Add at least one product to the bill.',
           ),
+        ),
+      );
+      return;
+    }
+
+    if (DemoService().isDemoMode) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: Color(0xFFD97706)),
+              SizedBox(width: 8),
+              Text('Demo Mode: Billing Disabled', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'Real billing confirmation and stock deduction are disabled in Demo Mode.\n\n'
+            'A real authenticated shopkeeper login is required to record live transactions in the database.\n\n'
+            'You can still preview what the generated invoice receipt looks like.',
+            style: TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                final simulatedInvoice = DemoData.createSimulatedInvoice(items, _cart.totalAmount);
+                _cart.clear();
+                Navigator.pushNamed(
+                  context,
+                  '/invoice',
+                  arguments: simulatedInvoice,
+                );
+              },
+              child: const Text('Preview Demo Invoice'),
+            ),
+          ],
         ),
       );
       return;

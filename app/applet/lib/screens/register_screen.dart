@@ -59,10 +59,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.message;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Registration failed: $e';
       });

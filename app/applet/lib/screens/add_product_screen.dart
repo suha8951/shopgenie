@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/demo_service.dart';
 import '../services/product_service.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -96,6 +97,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     // Match the existing Django backend's UNIT and KG values.
     final sellingType = selectedUnit == 'Kg' ? 'KG' : 'UNIT';
+
+    if (DemoService().isDemoMode) {
+      DemoService().showDemoActionDisabledDialog(
+        context,
+        actionName: 'Adding product to production stock',
+        customExplanation:
+            'Production stock updates are disabled in Demo Mode.\n\n'
+            'A real authenticated shopkeeper login is required to register new products to the live database.',
+      );
+      return;
+    }
 
     setState(() {
       isSaving = true;

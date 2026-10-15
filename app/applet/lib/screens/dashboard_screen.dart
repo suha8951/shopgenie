@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/analytics.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/demo_data.dart';
+import '../services/demo_service.dart';
 import '../services/invoice_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
@@ -33,8 +35,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      final user = null;
-      final analytics = null;
+      final User? user;
+      final ShopAnalytics? analytics;
+
+      if (DemoService().isDemoMode) {
+        user = DemoData.demoUser;
+        analytics = DemoData.demoAnalytics;
+      } else {
+        user = AuthService().currentUser ?? await AuthService().fetchProfile();
+        analytics = await InvoiceService().getAnalytics();
+      }
 
       if (!mounted) return;
       setState(() {
@@ -69,22 +79,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Icon(Icons.storefront_rounded, color: AppTheme.primaryGreen, size: 22),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  shopName,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Hello, $username',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.normal),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    shopName,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Hello, $username',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.normal),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
+          if (DemoService().isDemoMode)
+            IconButton(
+              icon: const Icon(Icons.exit_to_app, color: Color(0xFFD97706)),
+              tooltip: 'Exit Demo Mode',
+              onPressed: () {
+                DemoService().exitDemo();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.apps_outlined),
             tooltip: 'UI Preview',
@@ -99,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Profile & Settings',
+            tooltip: 'My Shop & Settings',
             onPressed: () => Navigator.pushNamed(context, '/profile'),
           ),
         ],
@@ -120,7 +143,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Quick Action Buttons
+                        // Demo Mode Banner
+                        if (DemoService().isDemoMode) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline, color: Color(0xFFD97706), size: 20),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Demo Mode: Showing sample Kirana store data. Live backend API calls and mutations are disabled.',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    DemoService().exitDemo();
+                                    Navigator.pushReplacementNamed(context, '/login');
+                                  },
+                                  child: const Text('Exit Demo',
+                                      style: TextStyle(
+                                          color: Color(0xFFD97706), fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Quick Action Buttons - Grid 1: Operations
                         Row(
                           children: [
                             Expanded(
@@ -131,12 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 onTap: () => Navigator.pushNamed(context, '/billing'),
                               ),
                             ),
-
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
+                            const SizedBox(width: 12),
                             Expanded(
                               child: _ActionButton(
                                 label: 'Catalog',
@@ -145,7 +197,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 onTap: () => Navigator.pushNamed(context, '/products'),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
                             Expanded(
                               child: _ActionButton(
                                 label: 'Invoices',
@@ -154,9 +210,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 onTap: () => Navigator.pushNamed(context, '/invoices'),
                               ),
                             ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _ActionButton(
+                                label: 'Inventory',
+                                icon: Icons.warehouse_outlined,
+                                color: const Color(0xFFE65100),
+                                onTap: () => Navigator.pushNamed(context, '/inventory'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _ActionButton(
+                                label: 'Add Stock',
+                                icon: Icons.add_box_outlined,
+                                color: const Color(0xFF00897B),
+                                onTap: () => Navigator.pushNamed(context, '/add_product'),
+                              ),
+                            ),
+                            if (_user?.isOwner ?? true) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionButton(
+                                  label: 'Workers',
+                                  icon: Icons.badge_outlined,
+                                  color: const Color(0xFF6D4C41),
+                                  onTap: () => Navigator.pushNamed(context, '/workers'),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _ActionButton(
+                                label: (_user?.isOwner ?? true) ? 'My Shop & Settings' : 'My Profile & Settings',
+                                icon: Icons.store_outlined,
+                                color: const Color(0xFF455A64),
+                                onTap: () => Navigator.pushNamed(context, '/profile'),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
+
 
                         // Analytics Section Header
                         const Text(

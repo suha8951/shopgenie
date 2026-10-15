@@ -3,6 +3,7 @@ import 'models/invoice.dart';
 import 'models/product.dart';
 import 'models/scan_result.dart';
 import 'screens/add_product_screen.dart';
+import 'screens/billing_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/edit_product_screen.dart';
 import 'screens/inventory_screen.dart';
@@ -17,14 +18,18 @@ import 'screens/scan_results_screen.dart';
 import 'screens/scanning_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/weight_entry_screen.dart';
+import 'screens/worker_management_screen.dart';
 import 'services/api_service.dart';
+import 'services/demo_service.dart';
+import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
 import 'ui_preview_screen.dart';
-import 'screens/billing_screen.dart';
+import 'widgets/demo_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiService().init();
+  await ThemeService().init();
   runApp(const ShopGenieApp());
 }
 
@@ -33,45 +38,82 @@ class ShopGenieApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ShopGenie AI',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      initialRoute: '/ui_preview',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
-        '/ui_preview': (context) => const UiPreviewScreen(),
-        '/billing': (context) => const BillingScreen(),
-        '/products': (context) => const ProductsScreen(),
-        '/product_detail': (context) {
-          final product = ModalRoute.of(context)!.settings.arguments as Product;
-          return ProductDetailsScreen(product: product);
-        },
-        '/add_product': (context) => const AddProductScreen(),
-        '/edit_product': (context) {
-          final product = ModalRoute.of(context)!.settings.arguments as Product;
-          return EditProductScreen(product: product);
-        },
-        '/inventory': (context) => const InventoryScreen(),
-        '/scan': (context) => const ScanningScreen(),
-        '/scan_results': (context) {
-          final result = ModalRoute.of(context)!.settings.arguments as ScanResult;
-          return ScanResultsScreen(scanResult: result);
-        },
-        '/manual_selection': (context) => const ManualSelectionScreen(),
-        '/weight_entry': (context) {
-          final product = ModalRoute.of(context)!.settings.arguments as Product;
-          return WeightEntryScreen(product: product);
-        },
-        '/invoice': (context) {
-          final invoice = ModalRoute.of(context)?.settings.arguments as Invoice?;
-          return InvoiceScreen(initialInvoice: invoice);
-        },
-        '/invoices': (context) => const InvoiceScreen(),
-        '/profile': (context) => const ProfileScreen(),
+    return ListenableBuilder(
+      listenable: ThemeService(),
+      builder: (context, _) {
+        return MaterialApp(
+          navigatorKey: DemoService.navigatorKey,
+          title: 'ShopGenie AI',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeService().themeMode,
+          initialRoute: '/login',
+          builder: (context, child) {
+            return ListenableBuilder(
+              listenable: DemoService(),
+              builder: (context, _) {
+                if (!DemoService().isDemoMode) {
+                  return child ?? const SizedBox.shrink();
+                }
+                return Material(
+                  child: Column(
+                    children: [
+                      DemoBanner(
+                        onExit: () {
+                          DemoService().exitDemo();
+                          DemoService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                            '/login',
+                            (route) => false,
+                          );
+                        },
+                      ),
+                      Expanded(child: child ?? const SizedBox.shrink()),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+          routes: {
+            '/': (context) => const SplashScreen(),
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/dashboard': (context) => const DashboardScreen(),
+            '/ui_preview': (context) => const UiPreviewScreen(),
+            '/billing': (context) => const BillingScreen(),
+            '/products': (context) => const ProductsScreen(),
+            '/product_detail': (context) {
+              final product = ModalRoute.of(context)!.settings.arguments as Product;
+              return ProductDetailsScreen(product: product);
+            },
+            '/add_product': (context) => const AddProductScreen(),
+            '/edit_product': (context) {
+              final product = ModalRoute.of(context)!.settings.arguments as Product;
+              return EditProductScreen(product: product);
+            },
+            '/inventory': (context) => const InventoryScreen(),
+            '/workers': (context) => const WorkerManagementScreen(),
+            '/scan': (context) => const ScanningScreen(),
+            '/scan_results': (context) {
+              final result = ModalRoute.of(context)!.settings.arguments as ScanResult;
+              return ScanResultsScreen(scanResult: result);
+            },
+            '/manual_selection': (context) => const ManualSelectionScreen(),
+            '/weight_entry': (context) {
+              final product = ModalRoute.of(context)!.settings.arguments as Product;
+              return WeightEntryScreen(product: product);
+            },
+            '/invoice': (context) {
+              final invoice = ModalRoute.of(context)?.settings.arguments as Invoice?;
+              return InvoiceScreen(initialInvoice: invoice);
+            },
+            '/invoices': (context) => const InvoiceScreen(),
+            '/profile': (context) => const ProfileScreen(),
+            '/my_shop': (context) => const ProfileScreen(initialTab: 0),
+            '/settings': (context) => const ProfileScreen(initialTab: 1),
+          },
+        );
       },
     );
   }

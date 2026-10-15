@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
+import '../services/demo_service.dart';
 import '../services/product_service.dart';
 import '../theme/app_theme.dart';
 
@@ -71,6 +72,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   Future<void> _handleUpdate() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (DemoService().isDemoMode) {
+      DemoService().showDemoActionDisabledDialog(
+        context,
+        actionName: 'Modifying product stock',
+        customExplanation:
+            'Product modifications are disabled in Demo Mode.\n\n'
+            'A real authenticated shopkeeper login is required to modify prices, categories, or stock levels in the live database.',
+      );
+      return;
+    }
 
     final cost =
         double.tryParse(_costPriceController.text.trim()) ?? 0.0;
